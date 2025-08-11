@@ -4,7 +4,9 @@ function AnalysisResult( props: {result: any} ) {
   return (
     <div className="p-4 border rounded-lg bg-green-50">
       <p><strong>Match Score:</strong> {props.result.score}/100</p>
-      <p><strong>Feedback:</strong> {props.result.feedback}</p>
+      <pre className="whitespace-pre-wrap">
+        <p style={{ whiteSpace: 'pre-wrap' }}><strong>Feedback:</strong> {props.result.feedback}</p>
+      </pre>
     </div>
   );
 }
