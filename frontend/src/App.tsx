@@ -42,9 +42,9 @@ function App() {
   };
 
   return (
-      <>
+      <div className="flex justify-center">
         <ParticlesBg type="lines" bg={true} />
-        <div className="max-w-3xl mx-auto bg-white p-6 rounded-2xl shadow-md space-y-6 " style={{minHeight: 1000, marginLeft: 600}}>
+        <div className="max-w-3xl bg-white p-6 rounded-2xl shadow-md space-y-6 " style={{minHeight: '100vh'}}>
           <h1 className="text-2xl font-bold text-center">Smart Resume Analyzer</h1>
           
           <FileUpload setFile={setResumeFile} />
@@ -69,7 +69,7 @@ function App() {
 
           {result && <AnalysisResult result={result} />}
         </div>
-      </>
+      </div>
   );
 }
 
