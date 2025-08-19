@@ -3,16 +3,35 @@ from dotenv import load_dotenv
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-# import google.generativeai as genai
 import os
 from google import genai
+from langchain_google_genai import ChatGoogleGenerativeAI
 
-# genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+from pydantic import BaseModel
+from langchain.prompts import ChatPromptTemplate
+from langchain.output_parsers import PydanticOutputParser
+
 load_dotenv()
-client = genai.Client()
-# model2 = genai.GenerativeModel('gemini-pro')
-# openai.api_key = os.getenv("OPENAI_API_KEY")
+
+class ResumeAnalysis(BaseModel):
+    match_score: int
+    feedback: str
+
 model = SentenceTransformer('all-MiniLM-L6-v2')
+parser = PydanticOutputParser(pydantic_object=ResumeAnalysis)
+
+# Initialize the Gemini model
+llm = ChatGoogleGenerativeAI(
+    model="gemini-1.5-flash",  # Or 'gemini-1.5-pro' depending on needs
+    temperature=0.7  # Adjust as desired
+)
+
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "You are an expert career advisor. Compare a resume text content with a job description and give structured feedback."),
+    ("user", "Resume text content:\n{resume_text}\n\nJob Description:\n{job_description}\n\n"
+             "Respond in JSON with fields 'match_score' (0–100) and 'feedback'.\n"
+             "{format_instructions}")
+])
 
 def get_embedding(text: str) -> list:
     return model.encode(text, convert_to_numpy=True)
@@ -23,23 +42,17 @@ def compute_similarity(text1: str, text2: str) -> float:
     score = cosine_similarity(emb1, emb2)[0][0]
     return float(score)
 
-def generate_feedback(resume_text: str, job_text: str) -> str:
-    prompt = f"""
-You are a resume expert. Analyze the resume text content below against the job description and give:
-- A match score (1 to 100)
-- 3 suggestions to improve the resume
-- Missing keywords
-
-Resume text content:
-{resume_text}
-
-Job Description:
-{job_text}
-"""
-    print('resume_text', resume_text)
-    response = client.models.generate_content(
-        model="gemini-2.5-flash", contents=prompt
+async def generate_feedback(resume_text: str, job_description: str) -> str:
+    formatted_prompt = prompt.format_messages(
+        resume_text=resume_text,
+        job_description=job_description,
+        format_instructions=parser.get_format_instructions()
     )
-    print(response.text)
-    # response = client.text_generation(prompt, max_new_tokens=300)
-    return response.text
+
+    response = await llm.ainvoke(formatted_prompt)
+    parsed = parser.parse(response.content)
+
+    return {
+        "match_score": parsed.match_score,
+        "feedback": parsed.feedback
+    }
